@@ -1,8 +1,11 @@
 package chat.server;
 
 import lombok.Getter;
+
 import java.util.LinkedList;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.concurrent.locks.ReadWriteLock;
 import java.util.stream.Stream;
 
 public class Channel {
@@ -11,45 +14,60 @@ public class Channel {
     private final String channelName;
     private final List<ClientHandler> channelMembers = new LinkedList<>();
     private final ChannelHistoryRepository channelHistoryRepository;
+    private final ReadWriteLock lock;
 
-    public Channel(String name) {
+    public Channel(String name, ReadWriteLock lock) {
         this.channelName = name;
+        this.lock = lock;
         this.channelHistoryRepository = new FileChannelHistoryRepository(name);
     }
 
-    public synchronized void addClient(ClientHandler clientHandler) {
+    public void addClient(ClientHandler clientHandler) {
+        lock.writeLock().lock();
         channelMembers.add(clientHandler);
         channelHistoryRepository.saveMessage(String.format("%s : joined the channel", clientHandler.getClientName()));
+        lock.writeLock().unlock();
         Broadcaster.broadcast(String.format("%s joined the channel %s", clientHandler.getClientName(), channelName), channelMembers);
     }
 
-    public synchronized ClientHandler getClient(String name) {
-        return channelMembers.stream()
+    public ClientHandler getClient(String name) {
+        lock.readLock().lock();
+        ClientHandler client = channelMembers.stream()
                 .filter(clientHandler -> clientHandler.getClientName().equals(name))
-                .findAny().orElseThrow();
+                .findAny().orElseThrow(NoSuchElementException::new);
+        lock.readLock().unlock();
+        return client;
     }
 
-    public synchronized Stream<String> getClientNames() {
-        return channelMembers.stream()
+    public Stream<String> getClientNames() {
+        lock.readLock().unlock();
+        Stream<String> clientNames = channelMembers.stream()
                 .map(ClientHandler::getClientName);
+        lock.readLock().unlock();
+        return clientNames;
     }
 
-    public synchronized void removeClient(ClientHandler clientHandler) {
+    public void removeClient(ClientHandler clientHandler) {
+        lock.writeLock().lock();
+        channelMembers.remove(clientHandler);
         Broadcaster.broadcast(String.format("%s has left from channel %s", clientHandler.getClientName(), channelName), channelMembers);
         channelHistoryRepository.saveMessage(String.format("%s : has left from channel", clientHandler.getClientName()));
-        channelMembers.remove(clientHandler);
+        lock.writeLock().unlock();
     }
 
-    public  void removeAllClients(){
+    public void removeAllClients() {
         channelMembers.forEach(this::removeClient);
     }
 
-    public  List<String> getHistory(ClientHandler clientHandler){
-        return channelHistoryRepository.getHistory(clientHandler.getClientName());
+    public List<String> getHistory(ClientHandler clientHandler) {
+        lock.readLock().lock();
+        List<String> channelList = channelHistoryRepository.getHistory(clientHandler.getClientName());
+        lock.readLock().unlock();
+        return channelList;
     }
 
     public void broadcast(String message, String name) {
         Broadcaster.broadcast(String.format("%s : %s", name, message), channelMembers);
-        channelHistoryRepository.saveMessage(String.format("%s : %s",name,message));
+        channelHistoryRepository.saveMessage(String.format("%s : %s", name, message));
     }
 }

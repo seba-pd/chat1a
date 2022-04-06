@@ -6,6 +6,7 @@ import lombok.Setter;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.concurrent.locks.ReadWriteLock;
 
 @Setter
 @Getter
@@ -20,11 +21,13 @@ public class ClientHandler implements Runnable {
     private Channel actualChannel;
     private Channels channels;
     private UIResolver ui;
+    private ReadWriteLock lock;
 
-    public ClientHandler(Socket socket, Channels channels) {
+    public ClientHandler(Socket socket, Channels channels, ReadWriteLock lock) {
 
         try {
             this.socket = socket;
+            this.lock = lock;
             this.dataOutputStream = new DataOutputStream(socket.getOutputStream());
             this.dataInputStream = new DataInputStream(socket.getInputStream());
             this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
@@ -66,8 +69,11 @@ public class ClientHandler implements Runnable {
     }
 
     private void addNewChannel() throws IOException {
-        Channel channel = new Channel(bufferedReader.readLine());
-        channels.addChannel(channel);
+        String channel;
+        while (channels.isPresent(channel = bufferedReader.readLine())) {
+            printWriter.println("Channel already exist!");
+        }
+        channels.addChannel(new Channel(channel,lock));
         FileHistoryUtil.createHistoryFile(actualChannel.getChannelName());
     }
 
@@ -134,7 +140,7 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private void close(){
+    private void close() {
         try {
             printWriter.close();
             bufferedReader.close();
