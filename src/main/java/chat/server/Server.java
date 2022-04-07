@@ -1,7 +1,5 @@
 package chat.server;
 
-import lombok.Getter;
-
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -15,8 +13,7 @@ public class Server {
     public final static String DATA_DIRECTORY = "C:\\Users\\Seba\\chat1a\\data\\";
     private final ExecutorService executorService = Executors.newFixedThreadPool(1000);
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
-    @Getter
-    private final Channels channels =  new Channels(lock);;
+    private final Channels channels =  new Channels(lock);
 
     public static void main(String[] args) {
         int port = Integer.parseInt(args[0]);

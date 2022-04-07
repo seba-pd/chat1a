@@ -90,7 +90,6 @@ public class ClientHandler implements Runnable {
 
     private void exitChat() throws IOException {
         printWriter.println("/exit");
-        actualChannel.removeClient(this);
         System.out.println("Connection disconnect " + socket.toString());
         socket.close();
     }
