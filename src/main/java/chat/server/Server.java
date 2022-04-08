@@ -3,6 +3,8 @@ package chat.server;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -14,6 +16,7 @@ public class Server {
     private final ExecutorService executorService = Executors.newFixedThreadPool(1000);
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final Channels channels =  new Channels(lock);
+    private final List<String> clients = new LinkedList<>();
 
     public static void main(String[] args) {
         int port = Integer.parseInt(args[0]);
@@ -35,7 +38,8 @@ public class Server {
             try {
                 Socket socket = serverSocket.accept();
                 System.out.println("Connection establish " + socket.toString());
-                ClientHandler clienthandler = new ClientHandler(socket, channels, lock);
+                ClientHandler clienthandler = new ClientHandler(socket, channels, lock, clients);
+                clients.add(clienthandler.getClientName());
                 executorService.execute(clienthandler);
             } catch (IOException e) {
                 e.printStackTrace();

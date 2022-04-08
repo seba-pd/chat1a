@@ -6,12 +6,14 @@ import lombok.Setter;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.List;
 import java.util.concurrent.locks.ReadWriteLock;
 
 @Setter
 @Getter
 public class ClientHandler implements Runnable {
 
+    private List<String> clientsName;
     private Socket socket;
     private PrintWriter printWriter;
     private BufferedReader bufferedReader;
@@ -22,10 +24,12 @@ public class ClientHandler implements Runnable {
     private Channels channels;
     private UIResolver ui;
     private ReadWriteLock lock;
+    private ChattingOnChannelResolver chattingOnChannelResolver;
 
-    public ClientHandler(Socket socket, Channels channels, ReadWriteLock lock) {
+    public ClientHandler(Socket socket, Channels channels, ReadWriteLock lock, List<String> clientsName) {
 
         try {
+            this.clientsName = clientsName;
             this.socket = socket;
             this.lock = lock;
             this.dataOutputStream = new DataOutputStream(socket.getOutputStream());
@@ -33,7 +37,7 @@ public class ClientHandler implements Runnable {
             this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.printWriter = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
             this.channels = channels;
-            this.clientName = bufferedReader.readLine();
+            this.clientName = checkIfClientExist();
             this.ui = new UIResolver(printWriter, clientName);
             ui.welcome();
         } catch (IOException e) {
@@ -41,8 +45,17 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    private String checkIfClientExist() throws IOException {
+        String clientName;
+        while (clientsName.contains(clientName = bufferedReader.readLine())) {
+            printWriter.println("Name already exist!");
+        }
+        return clientName;
+    }
+
     @Override
     public void run() {
+        chattingOnChannelResolver = new ChattingOnChannelResolver(this);
         while (!socket.isClosed()) {
             try {
                 ui.showMainOption();
@@ -73,7 +86,7 @@ public class ClientHandler implements Runnable {
         while (channels.isPresent(channel = bufferedReader.readLine())) {
             printWriter.println("Channel already exist!");
         }
-        channels.addChannel(new Channel(channel,lock));
+        channels.addChannel(new Channel(channel, lock));
         FileHistoryUtil.createHistoryFile(actualChannel.getChannelName());
     }
 
@@ -98,45 +111,18 @@ public class ClientHandler implements Runnable {
         printWriter.println("Wrong command!");
     }
 
-    private void getHistory() {
-        actualChannel.getHistory(this).forEach(s -> printWriter.println(s));
-    }
-
-    private void showChannelClients() {
-        actualChannel.getClientNames().forEach(c -> printWriter.println(c));
-    }
-
-    private void sendFileToClient() throws IOException {
-        String fileName = bufferedReader.readLine();
-        String receiverName = bufferedReader.readLine();
-        try (DataOutputStream receiverDataOutputStream = new DataOutputStream(actualChannel.getClient(receiverName).getDataOutputStream());
-             PrintWriter receiverPrintWriter = new PrintWriter(actualChannel.getClient(receiverName).getPrintWriter(), true)) {
-            receiverPrintWriter.println("/file");
-            receiverPrintWriter.println(this.clientName + " send a file :" + fileName);
-            dataInputStream.transferTo(receiverDataOutputStream);
-        }
-    }
-
     private void enterClientToChannel(String channelName) {
         actualChannel = channels.selectChannel(channelName);
         actualChannel.addClient(this);
     }
 
-    private void exitClientFromChannel() {
-        actualChannel.removeClient(this);
+    private void chattingOnChannel() {
+        ui.showChannelOption();
+        chattingOnChannelResolver.chatOnChannel();
     }
 
-    private void chattingOnChannel() throws IOException {
-        ui.showChannelOption();
-        String message;
-        while (!(message = bufferedReader.readLine()).equals("/ec")) {
-            switch (message) {
-                case "/sf" -> sendFileToClient();
-                case "/sh" -> getHistory();
-                case "/sc" -> showChannelClients();
-                default -> actualChannel.broadcast(message, this.clientName);
-            }
-        }
+    private void exitClientFromChannel() {
+        actualChannel.removeClient(this);
     }
 
     private void close() {
