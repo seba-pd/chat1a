@@ -4,11 +4,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 
-public class ChattingOnChannelResolver {
+public class ChattingOnChannelService {
 
     private final ClientHandler clientHandler;
 
-    public ChattingOnChannelResolver(ClientHandler clientHandler) {
+    public ChattingOnChannelService(ClientHandler clientHandler) {
         this.clientHandler = clientHandler;
     }
 

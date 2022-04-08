@@ -24,7 +24,7 @@ public class ClientHandler implements Runnable {
     private Channels channels;
     private UIResolver ui;
     private ReadWriteLock lock;
-    private ChattingOnChannelResolver chattingOnChannelResolver;
+    private ChattingOnChannelService chattingOnChannelResolver;
 
     public ClientHandler(Socket socket, Channels channels, ReadWriteLock lock, List<String> clientsName) {
 
@@ -45,17 +45,9 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    private String checkIfClientExist() throws IOException {
-        String clientName;
-        while (clientsName.contains(clientName = bufferedReader.readLine())) {
-            printWriter.println("Name already exist!");
-        }
-        return clientName;
-    }
-
     @Override
     public void run() {
-        chattingOnChannelResolver = new ChattingOnChannelResolver(this);
+        chattingOnChannelResolver = new ChattingOnChannelService(this);
         while (!socket.isClosed()) {
             try {
                 ui.showMainOption();
@@ -104,6 +96,7 @@ public class ClientHandler implements Runnable {
     private void exitChat() throws IOException {
         printWriter.println("/exit");
         System.out.println("Connection disconnect " + socket.toString());
+        clientsName.remove(clientName);
         socket.close();
     }
 
@@ -134,5 +127,13 @@ public class ClientHandler implements Runnable {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private String checkIfClientExist() throws IOException {
+        String clientName;
+        while (clientsName.contains(clientName = bufferedReader.readLine())) {
+            printWriter.println("Name already exist!");
+        }
+        return clientName;
     }
 }
