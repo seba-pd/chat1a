@@ -1,5 +1,6 @@
 package chat.server;
 
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -26,7 +27,6 @@ public class ChattingOnChannelService {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
     }
 
     private void showChannelClients() {
@@ -42,11 +42,12 @@ public class ChattingOnChannelService {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        try (DataOutputStream receiverDataOutputStream = new DataOutputStream(clientHandler.getActualChannel().getClient(receiverName).getDataOutputStream());
-             PrintWriter receiverPrintWriter = new PrintWriter(clientHandler.getActualChannel().getClient(receiverName).getPrintWriter(), true)) {
+        try (DataOutputStream receiverDataOutputStream = new DataOutputStream(clientHandler.getActualChannel().getClient(receiverName).getSocket().getOutputStream());
+             PrintWriter receiverPrintWriter = new PrintWriter(clientHandler.getActualChannel().getClient(receiverName).getPrintWriter(), true);
+             DataInputStream senderDataInputStream = new DataInputStream(clientHandler.getSocket().getInputStream())) {
             receiverPrintWriter.println("/file");
             receiverPrintWriter.println(clientHandler.getClientName() + " send a file :" + fileName);
-            clientHandler.getDataInputStream().transferTo(receiverDataOutputStream);
+            senderDataInputStream.transferTo(receiverDataOutputStream);
         } catch (IOException e) {
             e.printStackTrace();
         }

@@ -6,6 +6,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.stream.Stream;
 
 public class Channel {
@@ -14,56 +15,54 @@ public class Channel {
     private final String channelName;
     private final List<ClientHandler> channelMembers = new LinkedList<>();
     private final ChannelHistoryRepository channelHistoryRepository;
-    private final ReadWriteLock lock;
+    private final ReadWriteLock membersLock = new ReentrantReadWriteLock();
 
-    public Channel(String name, ReadWriteLock lock) {
+    public Channel(String name) {
         this.channelName = name;
-        this.lock = lock;
         this.channelHistoryRepository = new FileChannelHistoryRepository(name);
     }
 
     public void addClient(ClientHandler clientHandler) {
-        lock.writeLock().lock();
+        membersLock.writeLock().lock();
         channelMembers.add(clientHandler);
+        membersLock.writeLock().unlock();
         channelHistoryRepository.saveMessage(String.format("%s : joined the channel", clientHandler.getClientName()));
-        lock.writeLock().unlock();
         Broadcaster.broadcast(String.format("%s joined the channel %s", clientHandler.getClientName(), channelName), channelMembers);
     }
 
     public ClientHandler getClient(String name) {
-        lock.readLock().lock();
+        membersLock.readLock().lock();
         ClientHandler client = channelMembers.stream()
                 .filter(clientHandler -> clientHandler.getClientName().equals(name))
                 .findAny().orElseThrow(NoSuchElementException::new);
-        lock.readLock().unlock();
+        membersLock.readLock().unlock();
         return client;
     }
 
     public Stream<String> getClientNames() {
-        lock.readLock().unlock();
+        membersLock.readLock().unlock();
         Stream<String> clientNames = channelMembers.stream()
                 .map(ClientHandler::getClientName);
-        lock.readLock().unlock();
+        membersLock.readLock().unlock();
         return clientNames;
     }
 
     public void removeClient(ClientHandler clientHandler) {
-        lock.writeLock().lock();
+        membersLock.writeLock().lock();
         channelMembers.remove(clientHandler);
         Broadcaster.broadcast(String.format("%s has left from channel %s", clientHandler.getClientName(), channelName), channelMembers);
         channelHistoryRepository.saveMessage(String.format("%s : has left from channel", clientHandler.getClientName()));
-        lock.writeLock().unlock();
+        membersLock.writeLock().unlock();
     }
 
     public void removeAllClients() {
+        membersLock.writeLock().lock();
         channelMembers.forEach(this::removeClient);
+        membersLock.writeLock().unlock();
     }
 
     public List<String> getHistory(ClientHandler clientHandler) {
-        lock.readLock().lock();
-        List<String> channelList = channelHistoryRepository.getHistory(clientHandler.getClientName());
-        lock.readLock().unlock();
-        return channelList;
+        return channelHistoryRepository.getHistory(clientHandler.getClientName());
     }
 
     public void broadcast(String message, String name) {
