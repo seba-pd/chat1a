@@ -13,7 +13,6 @@ import java.util.List;
 @Getter
 public class ClientHandler implements Runnable {
 
-    private List<String> clientsName;
     private Socket socket;
     private PrintWriter printWriter;
     private BufferedReader bufferedReader;
@@ -22,11 +21,12 @@ public class ClientHandler implements Runnable {
     private Channels channels;
     private UIResolver ui;
     private ChattingOnChannelService chattingOnChannelResolver;
+    private List<ClientHandler> clientList;
 
-    public ClientHandler(Socket socket, Channels channels, List<String> clientsName) {
-            this.clientsName = clientsName;
+    public ClientHandler(Socket socket, Channels channels, List<ClientHandler> clientList) {
             this.socket = socket;
             this.channels = channels;
+            this.clientList = clientList;
     }
 
     @Override
@@ -44,17 +44,17 @@ public class ClientHandler implements Runnable {
     private void start(){
         this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
         this.printWriter = new PrintWriter(new BufferedWriter(new OutputStreamWriter(socket.getOutputStream())), true);
-        this.clientName = ui.selectName(clientsName, bufferedReader);
         this.chattingOnChannelResolver = new ChattingOnChannelService(this);
-        this.ui = new UIResolver(printWriter, clientName);
-        ui.welcome();
+        this.ui = new UIResolver(printWriter);
+        this.clientName = ui.selectName(bufferedReader, clientList);
+        ui.welcome(clientName);
     }
 
     private void selectOption(String option) {
         switch (option) {
             case "1" -> showChannels();
             case "2" -> addNewChannel();
-            case "3" -> selectChannel();
+            case "3" -> chatOnChannel();
             case "4" -> exitChat();
             default -> wrongCommand();
         }
@@ -69,7 +69,7 @@ public class ClientHandler implements Runnable {
         FileHistoryUtil.createHistoryFile(actualChannel.getChannelName());
     }
 
-    private void selectChannel() {
+    private void chatOnChannel() {
         enterClientToChannel(ui.selectChannel(this));
         chattingOnChannel();
         exitClientFromChannel();
@@ -79,7 +79,7 @@ public class ClientHandler implements Runnable {
     private void exitChat() {
         printWriter.println("/exit");
         System.out.println("Connection disconnect " + socket.toString());
-        clientsName.remove(clientName);
+        clientList.remove(this);
         socket.close();
     }
 

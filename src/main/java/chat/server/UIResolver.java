@@ -9,14 +9,12 @@ import java.util.List;
 public class UIResolver {
 
     private final PrintWriter printWriter;
-    private final String clientName;
 
-    public UIResolver(PrintWriter printWriter, String clientName) {
+    public UIResolver(PrintWriter printWriter) {
         this.printWriter = printWriter;
-        this.clientName = clientName;
     }
 
-    public void welcome(){
+    public void welcome(String clientName) {
         printWriter.println(String.format("Welcome %s !", clientName));
     }
 
@@ -27,7 +25,7 @@ public class UIResolver {
         printWriter.println("Type \"4\" to exit chat.");
     }
 
-    public void showChannelOption(){
+    public void showChannelOption() {
         printWriter.println("\nType /ec to exit actual channel.");
         printWriter.println("Type /sf to to send file to another channel member.");
         printWriter.println("Type /sh to show history of the channel.");
@@ -35,16 +33,16 @@ public class UIResolver {
     }
 
     @SneakyThrows
-    public String addChannel(ClientHandler clientHandler){
+    public String addChannel(ClientHandler clientHandler) {
         String channel;
-        while (!clientHandler.getChannels().isPresent(channel = clientHandler.getBufferedReader().readLine())){
+        while (!clientHandler.getChannels().isPresent(channel = clientHandler.getBufferedReader().readLine())) {
             printWriter.println("Channel already exist!");
         }
         return channel;
     }
 
     @SneakyThrows
-    public String selectChannel(ClientHandler clientHandler){
+    public String selectChannel(ClientHandler clientHandler) {
         String selectedChannel;
         printWriter.println("Enter channel name.");
         while (!clientHandler.getChannels().isPresent(selectedChannel = clientHandler.getBufferedReader().readLine())) {
@@ -54,9 +52,10 @@ public class UIResolver {
     }
 
     @SneakyThrows
-    public String selectName(List<String> clientsName, BufferedReader bufferedReader) {
+    public String selectName(BufferedReader bufferedReader, List<ClientHandler> clientList) {
         String clientName;
-        while (clientsName.contains(clientName = bufferedReader.readLine())) {
+        List<String> clients = clientList.stream().map(ClientHandler::getClientName).toList();
+        while (clients.contains(clientName = bufferedReader.readLine())) {
             printWriter.println("Name already exist!");
         }
         return clientName;

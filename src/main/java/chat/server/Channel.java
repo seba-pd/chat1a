@@ -50,9 +50,9 @@ public class Channel {
     public void removeClient(ClientHandler clientHandler) {
         membersLock.writeLock().lock();
         channelMembers.remove(clientHandler);
+        membersLock.writeLock().unlock();
         Broadcaster.broadcast(String.format("%s has left from channel %s", clientHandler.getClientName(), channelName), channelMembers);
         channelHistoryRepository.saveMessage(String.format("%s : has left from channel", clientHandler.getClientName()));
-        membersLock.writeLock().unlock();
     }
 
     public void removeAllClients() {
