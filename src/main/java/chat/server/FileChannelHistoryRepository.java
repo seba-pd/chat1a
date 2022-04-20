@@ -33,7 +33,7 @@ public class FileChannelHistoryRepository  implements ChannelHistoryRepository {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        historyLock.readLock().unlock();
+        historyLock.writeLock().unlock();
     }
 
     @Override

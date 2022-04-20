@@ -35,7 +35,8 @@ public class UIResolver {
     @SneakyThrows
     public String addChannel(ClientHandler clientHandler) {
         String channel;
-        while (!clientHandler.getChannels().isPresent(channel = clientHandler.getBufferedReader().readLine())) {
+        printWriter.println("Enter channel name: ");
+        while (clientHandler.getChannels().isPresent(channel = clientHandler.getBufferedReader().readLine())) {
             printWriter.println("Channel already exist!");
         }
         return channel;

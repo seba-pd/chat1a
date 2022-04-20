@@ -26,7 +26,7 @@ public class FileHistoryUtil {
         try (BufferedReader bufferedReader = Files.newBufferedReader(Path.of(channelHistoryFilePath))) {
             String line;
             while ((line = bufferedReader.readLine()) != null) {
-                if (line.substring(18).equals(clientStartHistory)) {
+                if (line.substring(19).equals(clientStartHistory)) {
                     while ((line = bufferedReader.readLine()) != null && !line.substring(18).equals(clientEndHistory)){
                         channelHistory.add(line);
                     }

@@ -30,12 +30,15 @@ public class ClientHandler implements Runnable {
     }
 
     @Override
-    @SneakyThrows
     public void run() {
         start();
         while (!socket.isClosed()) {
                 ui.showMainOption();
+            try {
                 selectOption(bufferedReader.readLine());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         close();
     }
@@ -61,12 +64,13 @@ public class ClientHandler implements Runnable {
     }
 
     private void showChannels() {
-        channels.getAllChannels().forEach(channel -> printWriter.println(channel));
+        channels.getAllChannels().forEach(channel -> printWriter.println(channel.getChannelName()));
     }
 
     private void addNewChannel() {
-        channels.addChannel(new Channel(ui.addChannel(this)));
-        FileHistoryUtil.createHistoryFile(actualChannel.getChannelName());
+        String name = ui.addChannel(this);
+        channels.addChannel(new Channel(name));
+        FileHistoryUtil.createHistoryFile(name);
     }
 
     private void chatOnChannel() {
